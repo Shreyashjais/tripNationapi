@@ -6,25 +6,40 @@ const userSchema = new mongoose.Schema({
     required: true,
     trim: true,
   },
+
   email: {
     type: String,
-    required: true,
+    lowercase: true,
     trim: true,
     unique: true,
-    lowercase: true,
+    sparse: true,
     match: [/^\S+@\S+\.\S+$/, 'Please enter a valid email'],
   },
+
+  phone: {
+    type: String,
+    trim: true,
+    unique: true,
+    sparse: true,
+  },
+
   password: {
     type: String,
-    required: true,
     trim: true,
+    required: true,
   },
-  otp: String,
-  otpExpiresAt: Date,
+
+  role: {
+    type: String,
+    enum: ["user", "admin"],
+    default: "user",
+  },
+
   isVerified: {
     type: Boolean,
-    default: false,
+    default: true,
   },
+
 }, { timestamps: true });
 
 module.exports = mongoose.model("User", userSchema);
