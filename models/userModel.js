@@ -22,6 +22,10 @@ const userSchema = new mongoose.Schema({
     unique: true,
     sparse: true,
   },
+  profileImage: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "File",
+  },
 
   password: {
     type: String,
@@ -31,8 +35,15 @@ const userSchema = new mongoose.Schema({
 
   role: {
     type: String,
-    enum: ["user", "admin"],
-    default: "user",
+    enum: ["customer", "admin"],
+    default: "customer",
+  },
+  otp:{
+    type:String,
+  },
+
+  otpExpiresIn:{
+    type :Date,
   },
 
   isVerified: {

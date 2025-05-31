@@ -1,3 +1,5 @@
+//This will contain details of all the tours
+
 const mongoose = require("mongoose");
 
 const itinerarySchema = new mongoose.Schema({

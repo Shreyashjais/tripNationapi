@@ -1,3 +1,4 @@
+//Booking Details
 const mongoose = require("mongoose");
 
 const bookingSchema = new mongoose.Schema({
@@ -10,16 +11,7 @@ const bookingSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",
   },
-  name: {
-    type: String,
-    required: true,
-  },
-  email: {
-    type: String,
-    required: true,
-  },
-  phone: String,
-
+ 
   travelDate: {
     type: Date,
     required: true,
@@ -42,6 +34,10 @@ const bookingSchema = new mongoose.Schema({
   payment: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Payment", 
+  },
+  attended: {
+    type: Boolean,
+    default: false, 
   },
 
   specialRequests: String,
