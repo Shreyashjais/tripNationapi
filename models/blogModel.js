@@ -1,4 +1,3 @@
-//Blog Model
 const mongoose = require("mongoose");
 
 const imageSchema = new mongoose.Schema(
@@ -15,14 +14,38 @@ const imageSchema = new mongoose.Schema(
   { _id: false }
 );
 
+const sectionSchema = new mongoose.Schema(
+  {
+    heading: { type: String, required: true },
+    paragraphs: [{ type: String, required: true }],
+  },
+  { _id: false }
+);
+
 const blogSchema = new mongoose.Schema(
   {
     title: { type: String, required: true, trim: true },
     slug: { type: String, required: true, unique: true, lowercase: true },
-    content: { type: String, required: true }, 
+    
+
+    content: { type: String, required: true },
+
     images: [imageSchema],
+
+ 
+    tags: [{ type: String, trim: true }],
+
    
+    sections: [sectionSchema],
+
+    readTime: { type: Number, required: true },
+
     publishedAt: { type: Date, default: Date.now },
+    status: {
+      type: String,
+      enum: ["pending", "approved"],
+      default: "pending",
+    },
   },
   { timestamps: true }
 );
