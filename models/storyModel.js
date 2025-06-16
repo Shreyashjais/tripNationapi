@@ -25,16 +25,17 @@ const sectionSchema = new mongoose.Schema(
 const storySchema = new mongoose.Schema(
   {
     title: { type: String, required: true, trim: true },
-   
-    
 
     content: { type: String, required: true },
 
     images: [imageSchema],
 
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
 
-
-   
     sections: [sectionSchema],
 
     publishedAt: { type: Date, default: Date.now },

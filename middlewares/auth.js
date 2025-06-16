@@ -15,7 +15,7 @@ exports.auth = (req, res, next) => {
     }
     try {
       const payload = jwt.verify(token, process.env.JWT_SECRET);
-      console.log(payload);
+      // console.log(payload);
       req.user = payload;
     } catch (error) {
       return res.status(401).json({
@@ -85,3 +85,12 @@ exports.isCustomer = (req, res, next) => {
     }
   };
   
+  exports.allowAdminOrSuperAdmin = (req, res, next) => {
+    if (req.user?.role === "admin" || req.user?.role === "superAdmin") {
+      return next();
+    }
+    return res.status(403).json({
+      success: false,
+      message: "Access restricted to admin or superAdmin only",
+    });
+  }

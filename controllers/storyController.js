@@ -36,12 +36,14 @@ exports.createStory = async (req, res) => {
       });
     }
 
-    const story = await Story.create({
+    let story = await Story.create({
       title,
       content,
       images: uploadedImages,
       sections: parsedSections,
+      createdBy:req.user.id
     });
+    story = await story.populate("createdBy", "name profileImage");
 
     res.status(201).json({
       success: true,
@@ -76,7 +78,7 @@ exports.getStoryById = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const story = await Story.findById(id);
+    const story = await Story.findById(id).populate("createdBy", "name profileImage");;
 
     if (!story) {
       return res.status(404).json({
@@ -205,7 +207,7 @@ exports.approveStory = async (req, res) => {
 
 exports.getApprovedStories = async (req, res) => {
   try {
-    const approvedStories = await Story.find({ status: "approved" });
+    const approvedStories = await Story.find({ status: "approved" }).populate("createdBy", "name profileImage");;
     res.status(200).json({ success: true, data: approvedStories });
   } catch (error) {
     console.error("Error fetching approved stories:", error);

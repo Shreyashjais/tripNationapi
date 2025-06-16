@@ -26,7 +26,7 @@ exports.createBlog = async (req, res) => {
       uploadedImages.push({ url: result.secure_url, publicId: result.public_id });
     }
 
-    const blog = await Blog.create({
+    let blog = await Blog.create({
       title,
       slug,
       content,
@@ -34,8 +34,9 @@ exports.createBlog = async (req, res) => {
       tags: parsedTags,
       sections: parsedSections,
       readTime,
+      createdBy: req.user.id,
     });
-
+    blog = await blog.populate("createdBy", "name profileImage");
     res.status(201).json({
       success: true,
       message: "Blog created successfully",
@@ -50,7 +51,7 @@ exports.createBlog = async (req, res) => {
 
 exports.getAllBlogs = async (req, res) => {
   try {
-    const blogs = await Blog.find().sort({ createdAt: -1 }); 
+    const blogs = await Blog.find().sort({ createdAt: -1 }).populate("createdBy", "name profileImage");; 
 
     res.status(200).json({
       success: true,
@@ -71,7 +72,7 @@ exports.getBlogById = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const blog = await Blog.findById(id);
+    const blog = await Blog.findById(id).populate("createdBy", "name profileImage");;
 
     if (!blog) {
       return res.status(404).json({
@@ -233,7 +234,7 @@ exports.deleteBlog = async (req, res) => {
 
 exports.getApprovedBlogs = async (req, res) => {
   try {
-    const approvedBlogs = await Blog.find({ status: "approved" });
+    const approvedBlogs = await Blog.find({ status: "approved" }).populate("createdBy", "name profileImage");
     res.status(200).json({ success: true, data: approvedBlogs });
   } catch (error) {
     console.error("Error fetching approved blogs:", error);

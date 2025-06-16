@@ -1,6 +1,13 @@
 const express = require("express");
 const app= express();
 
+const cors = require("cors");
+
+app.use(cors({
+  origin: "http://localhost:3000", 
+  credentials: true, 
+}));
+
 require("dotenv").config();
 const PORT= process.env.PORT ||3000;
 
@@ -31,6 +38,9 @@ app.use("/contactUs", contactUsRoutes)
 
 const storyRoutes= require("./routes/storyRoutes")
 app.use("/story", storyRoutes)
+
+const reelRoutes= require("./routes/reelRoutes")
+app.use("/reels", reelRoutes)
 
 app.listen(3000, ()=>{
     console.log(`Server started on PORT ${PORT} `)

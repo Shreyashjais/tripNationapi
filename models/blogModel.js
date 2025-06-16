@@ -26,19 +26,21 @@ const blogSchema = new mongoose.Schema(
   {
     title: { type: String, required: true, trim: true },
     slug: { type: String, required: true, unique: true, lowercase: true },
-    
 
     content: { type: String, required: true },
 
     images: [imageSchema],
 
- 
     tags: [{ type: String, trim: true }],
 
-   
     sections: [sectionSchema],
 
     readTime: { type: Number, required: true },
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
 
     publishedAt: { type: Date, default: Date.now },
     status: {
