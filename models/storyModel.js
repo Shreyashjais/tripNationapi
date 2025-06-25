@@ -17,7 +17,7 @@ const imageSchema = new mongoose.Schema(
 const sectionSchema = new mongoose.Schema(
   {
     heading: { type: String, required: true },
-    paragraphs: [{ type: String, required: true }],
+    paragraph: { type: String, required: true }, 
   },
   { _id: false }
 );
@@ -27,6 +27,17 @@ const storySchema = new mongoose.Schema(
     title: { type: String, required: true, trim: true },
 
     content: { type: String, required: true },
+    tags: [{ type: String, trim: true }],
+    category: {
+      type: String,
+      enum: ["adventure", "culture", "food and drink", "photography", "relaxation"],
+      required: true,
+    },
+    destination: {
+      type: String,
+      required: true,
+      trim: true,
+    },
 
     images: [imageSchema],
 

@@ -1,15 +1,16 @@
 const express= require("express")
 const router = express.Router();
 
-const {postContactUs, getAllContactMessages, revertContactFormStatus,
-     getContactMessageById, deleteContactMessageById, approveContactForm}= require("../controllers/contactUsController")
+const {postContactUs, getAllContactMessages,
+     getContactMessageById, deleteContactMessageById,
+     updateContactFormStatus}= require("../controllers/contactUsController");
+const { auth, allowAdminOrSuperAdmin, isCustomer } = require("../middlewares/auth");
 
-router.post("/post",postContactUs)
-router.get("/",getAllContactMessages)
-router.get("/:id", getContactMessageById)
-router.delete("/delete/:id", deleteContactMessageById)
-router.patch("/close/:id", approveContactForm)
-router.patch("/revertBack/:id", revertContactFormStatus)
+router.post("/post",auth,isCustomer, postContactUs)
+router.get("/",auth,allowAdminOrSuperAdmin, getAllContactMessages)
+router.get("/:id",auth, allowAdminOrSuperAdmin, getContactMessageById)
+router.delete("/:id",auth, allowAdminOrSuperAdmin, deleteContactMessageById)
+router.patch("/:id",auth, allowAdminOrSuperAdmin, updateContactFormStatus)
 
 
 module.exports = router;

@@ -25,7 +25,7 @@ const sectionSchema = new mongoose.Schema(
 const blogSchema = new mongoose.Schema(
   {
     title: { type: String, required: true, trim: true },
-    slug: { type: String, required: true, unique: true, lowercase: true },
+  
 
     content: { type: String, required: true },
 
@@ -36,6 +36,17 @@ const blogSchema = new mongoose.Schema(
     sections: [sectionSchema],
 
     readTime: { type: Number, required: true },
+    category: {
+      type: String,
+      enum: ["adventure", "culture", "food and drink", "photography", "relaxation"],
+      required: true,
+    },
+
+    destination: {
+      type: String,
+      required: true,
+      trim: true,
+    },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",

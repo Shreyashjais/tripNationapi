@@ -111,9 +111,16 @@ exports.deleteContactMessageById = async (req, res) => {
   
 
 
-exports.approveContactForm = async (req, res) => {
+
+
+exports.updateContactFormStatus = async (req, res) => {
   try {
     const { id } = req.params;
+    const { status } = req.body;
+
+    if (!["pending", "closed"].includes(status)) {
+      return res.status(400).json({ message: "Invalid status value" });
+    }
 
     const contact = await Contact.findById(id);
 
@@ -121,46 +128,20 @@ exports.approveContactForm = async (req, res) => {
       return res.status(404).json({ message: "Contact form not found" });
     }
 
-    if (contact.status !== "pending") {
-      return res.status(400).json({ message: "Only pending forms can be closed" });
+    if (contact.status === status) {
+      return res.status(400).json({ message: `Form is already marked as ${status}` });
     }
 
-    contact.status = "closed";
+    contact.status = status;
     await contact.save();
 
     res.status(200).json({
-      message: "Contact form status updated to closed",
+      success:true,
+      message: `Contact form status updated to ${status}`,
       contact,
     });
   } catch (error) {
-    console.error("Error approving contact form:", error);
-    res.status(500).json({ message: "Server error" });
-  }
-};
-
-exports.revertContactFormStatus = async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    const contact = await Contact.findById(id);
-
-    if (!contact) {
-      return res.status(404).json({ message: "Contact form not found" });
-    }
-
-    if (contact.status !== "closed") {
-      return res.status(400).json({ message: "Only closed forms can be reverted to pending" });
-    }
-
-    contact.status = "pending";
-    await contact.save();
-
-    res.status(200).json({
-      message: "Contact form status reverted to pending",
-      contact,
-    });
-  } catch (error) {
-    console.error("Error reverting contact form status:", error);
+    console.error("Error updating contact form status:", error);
     res.status(500).json({ message: "Server error" });
   }
 };

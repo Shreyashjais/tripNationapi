@@ -13,8 +13,4 @@ router.patch("/approve/:id",auth, allowAdminOrSuperAdmin, approveStory)
 router.patch("/revertBack/:id",auth, allowAdminOrSuperAdmin, revertToPending)
 router.delete("/delete/:id",auth, allowAdminOrSuperAdmin,deleteStory )
 
-
-
-
-
 module.exports = router;

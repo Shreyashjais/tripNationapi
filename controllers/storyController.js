@@ -7,10 +7,12 @@ const {
 
 exports.createStory = async (req, res) => {
   try {
-    const { title, content, sections } = req.body;
+    const { title, content, sections, destination, category, tags } = req.body;
 
     const parsedSections =
       typeof sections === "string" ? JSON.parse(sections) : sections;
+
+    const parsedTags = typeof tags === "string" ? JSON.parse(tags) : tags;
 
     const supportedTypes = ["jpg", "jpeg", "png"];
     const files =
@@ -39,9 +41,12 @@ exports.createStory = async (req, res) => {
     let story = await Story.create({
       title,
       content,
+      destination,
+      category,
+      tags:parsedTags,
       images: uploadedImages,
       sections: parsedSections,
-      createdBy:req.user.id
+      createdBy: req.user.id,
     });
     story = await story.populate("createdBy", "name profileImage");
 
@@ -78,7 +83,10 @@ exports.getStoryById = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const story = await Story.findById(id).populate("createdBy", "name profileImage");;
+    const story = await Story.findById(id).populate(
+      "createdBy",
+      "name profileImage"
+    );
 
     if (!story) {
       return res.status(404).json({
@@ -101,77 +109,87 @@ exports.getStoryById = async (req, res) => {
 };
 
 exports.updateStory = async (req, res) => {
-    try {
-      const storyId = req.params.id;
-      const {
-        title,
-        content,
-        sections,
-      } = req.body;
-  
-      // Parse JSON string fields (for form-data submissions)
-   
-      const parsedSections = typeof sections === "string" ? JSON.parse(sections) : sections;
-      const parsedImagesToDelete = typeof req.body.imagesToDelete === "string"
+  try {
+    const storyId = req.params.id;
+    const { title, content, sections } = req.body;
+
+    // Parse JSON string fields (for form-data submissions)
+
+    const parsedSections =
+      typeof sections === "string" ? JSON.parse(sections) : sections;
+    const parsedImagesToDelete =
+      typeof req.body.imagesToDelete === "string"
         ? JSON.parse(req.body.imagesToDelete)
         : req.body.imagesToDelete;
-  
-      const story = await Story.findById(storyId);
-      if (!story) {
-        return res.status(404).json({ success: false, message: "Story not found" });
-      }
-  
-      // Step 1: Delete selected images
-      if (parsedImagesToDelete && parsedImagesToDelete.length > 0) {
-        for (const img of parsedImagesToDelete) {
-          const publicId = typeof img === "string" ? img : img.publicId;
-          if (!publicId) continue;
-          console.log("Deleting image:", publicId);
-          await deleteFileFromCloudinary(publicId);
-          story.images = story.images.filter(image => image.publicId !== publicId);
-        }
-      }
-  
-      // Step 2: Upload new images
-      const supportedTypes = ["jpg", "jpeg", "png"];
-      const files = req.files?.newImages;
-      if (files) {
-        const newImages = Array.isArray(files) ? files : [files];
-        for (const file of newImages) {
-          const fileType = file.name.split(".").pop().toLowerCase();
-          if (!isFileTypeSupported(fileType, supportedTypes)) {
-            return res.status(400).json({
-              success: false,
-              message: `Unsupported image type: ${fileType}`,
-            });
-          }
-  
-          console.log("Uploading file to Cloudinary:", file.name);
-          const result = await uploadFileToCloudinary(file, "StoryUploads");
-          story.images.push({ url: result.secure_url, publicId: result.public_id });
-        }
-      }
-  
-      // Step 3: Update text content
-      story.title = title || story.title;
-   
-      story.content = content || story.content;
-   
-      story.sections = parsedSections || story.sections;
-   
-  
-      await story.save();
-  
-      return res.status(200).json({
-        success: true,
-        message: "Story updated successfully",
-        story,
-      });
-    } catch (err) {
-      console.error("Update Story error:", err);
-      return res.status(500).json({ success: false, message: "Internal server error", error: err.message });
+
+    const story = await Story.findById(storyId);
+    if (!story) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Story not found" });
     }
-  };
+
+    // Step 1: Delete selected images
+    if (parsedImagesToDelete && parsedImagesToDelete.length > 0) {
+      for (const img of parsedImagesToDelete) {
+        const publicId = typeof img === "string" ? img : img.publicId;
+        if (!publicId) continue;
+        console.log("Deleting image:", publicId);
+        await deleteFileFromCloudinary(publicId);
+        story.images = story.images.filter(
+          (image) => image.publicId !== publicId
+        );
+      }
+    }
+
+    // Step 2: Upload new images
+    const supportedTypes = ["jpg", "jpeg", "png"];
+    const files = req.files?.newImages;
+    if (files) {
+      const newImages = Array.isArray(files) ? files : [files];
+      for (const file of newImages) {
+        const fileType = file.name.split(".").pop().toLowerCase();
+        if (!isFileTypeSupported(fileType, supportedTypes)) {
+          return res.status(400).json({
+            success: false,
+            message: `Unsupported image type: ${fileType}`,
+          });
+        }
+
+        console.log("Uploading file to Cloudinary:", file.name);
+        const result = await uploadFileToCloudinary(file, "StoryUploads");
+        story.images.push({
+          url: result.secure_url,
+          publicId: result.public_id,
+        });
+      }
+    }
+
+    // Step 3: Update text content
+    story.title = title || story.title;
+
+    story.content = content || story.content;
+
+    story.sections = parsedSections || story.sections;
+
+    await story.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Story updated successfully",
+      story,
+    });
+  } catch (err) {
+    console.error("Update Story error:", err);
+    return res
+      .status(500)
+      .json({
+        success: false,
+        message: "Internal server error",
+        error: err.message,
+      });
+  }
+};
 
 exports.approveStory = async (req, res) => {
   try {
@@ -207,13 +225,33 @@ exports.approveStory = async (req, res) => {
 
 exports.getApprovedStories = async (req, res) => {
   try {
-    const approvedStories = await Story.find({ status: "approved" }).populate("createdBy", "name profileImage");;
+    const { destination, category } = req.query;
+
+    const query = {
+      status: "approved",
+    };
+
+    if (destination) {
+      query.destination = { $regex: new RegExp(destination, "i") };
+    }
+
+ 
+    if (category && category.toLowerCase() !== "all") {
+      query.category = category;
+    }
+
+    const approvedStories = await Story.find(query).populate(
+      "createdBy",
+      "name profileImage"
+    );
+
     res.status(200).json({ success: true, data: approvedStories });
   } catch (error) {
     console.error("Error fetching approved stories:", error);
     res.status(500).json({ success: false, message: "Server error" });
   }
 };
+
 
 exports.revertToPending = async (req, res) => {
   try {
@@ -227,12 +265,10 @@ exports.revertToPending = async (req, res) => {
     }
 
     if (story.status !== "approved") {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "Only approved stories can be reverted to pending",
-        });
+      return res.status(400).json({
+        success: false,
+        message: "Only approved stories can be reverted to pending",
+      });
     }
 
     story.status = "pending";

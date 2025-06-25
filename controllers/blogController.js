@@ -3,7 +3,7 @@ const { isFileTypeSupported, uploadFileToCloudinary, deleteFileFromCloudinary } 
 
 exports.createBlog = async (req, res) => {
   try {
-    const { title, slug, content, tags, readTime, sections } = req.body;
+    const { title,  content, tags, category, destination, readTime, sections } = req.body;
 
     const parsedTags = typeof tags === "string" ? tags.split(",").map(t => t.trim()) : tags;
     const parsedSections = typeof sections === "string" ? JSON.parse(sections) : sections;
@@ -35,6 +35,8 @@ exports.createBlog = async (req, res) => {
       sections: parsedSections,
       readTime,
       createdBy: req.user.id,
+      category,
+      destination
     });
     blog = await blog.populate("createdBy", "name profileImage");
     res.status(201).json({
@@ -51,7 +53,13 @@ exports.createBlog = async (req, res) => {
 
 exports.getAllBlogs = async (req, res) => {
   try {
-    const blogs = await Blog.find().sort({ createdAt: -1 }).populate("createdBy", "name profileImage");; 
+    const search = req.query.search || "";
+
+    const blogs = await Blog.find({
+      title: { $regex: search, $options: "i" } 
+    })
+      .sort({ createdAt: -1 })
+      .populate("createdBy", "name profileImage");
 
     res.status(200).json({
       success: true,
@@ -66,7 +74,6 @@ exports.getAllBlogs = async (req, res) => {
     });
   }
 };
-
 
 exports.getBlogById = async (req, res) => {
   try {
@@ -234,7 +241,13 @@ exports.deleteBlog = async (req, res) => {
 
 exports.getApprovedBlogs = async (req, res) => {
   try {
-    const approvedBlogs = await Blog.find({ status: "approved" }).populate("createdBy", "name profileImage");
+    const search = req.query.search || "";
+
+    const approvedBlogs = await Blog.find({
+      status: "approved",
+      title: { $regex: search, $options: "i" }, 
+    }).populate("createdBy", "name profileImage");
+
     res.status(200).json({ success: true, data: approvedBlogs });
   } catch (error) {
     console.error("Error fetching approved blogs:", error);
