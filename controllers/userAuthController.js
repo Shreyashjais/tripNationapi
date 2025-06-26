@@ -315,7 +315,7 @@ exports.deleteUser = async (req, res) => {
   try {
     const userId = req.params.id;
 
-    // 🧼 Check if user exists
+   
     const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({
@@ -324,7 +324,7 @@ exports.deleteUser = async (req, res) => {
       });
     }
 
-    // 🧹 Delete profile image from Cloudinary (if it exists)
+ 
     if (user.profileImage && user.profileImage.publicId) {
       await deleteFileFromCloudinary(user.profileImage.publicId);
     }
