@@ -100,43 +100,6 @@ exports.getSingleReel = async (req, res) => {
   }
 };
 
-exports.approveReel = async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    const reel = await Reel.findById(id);
-
-    if (!reel) {
-      return res.status(404).json({
-        success: false,
-        message: "Reel not found",
-      });
-    }
-
-    if (reel.status === "approved") {
-      return res.status(400).json({
-        success: false,
-        message: "Reel is already approved",
-      });
-    }
-
-    reel.status = "approved";
-    await reel.save();
-
-    res.status(200).json({
-      success: true,
-      message: "Reel approved successfully",
-      reel,
-    });
-  } catch (error) {
-    console.error("Error approving reel:", error);
-    res.status(500).json({
-      success: false,
-      message: "Server error while approving reel",
-    });
-  }
-};
-
 exports.getApprovedReels = async (req, res) => {
   try {
     const approvedReels = await Reel.find({ status: "approved" })
@@ -157,37 +120,52 @@ exports.getApprovedReels = async (req, res) => {
   }
 };
 
-exports.revertReelToPending = async (req, res) => {
+exports.updateReelStatus = async (req, res) => {
   try {
-    const reelId = req.params.id;
+    const { id } = req.params;
+    const { status } = req.body; 
 
-    const reel = await Reel.findById(reelId);
-    if (!reel) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Reel not found" });
-    }
-
-    if (reel.status !== "approved") {
+    if (!["approved", "pending"].includes(status)) {
       return res.status(400).json({
         success: false,
-        message: "Only approved reels can be reverted to pending",
+        message: "Invalid status value. Allowed: 'approved' or 'pending'.",
       });
     }
 
-    reel.status = "pending";
+    const reel = await Reel.findById(id);
+    if (!reel) {
+      return res.status(404).json({
+        success: false,
+        message: "Reel not found",
+      });
+    }
+
+    if (reel.status === status) {
+      return res.status(400).json({
+        success: false,
+        message: `Reel is already in '${status}' status`,
+      });
+    }
+
+    reel.status = status;
     await reel.save();
 
     res.status(200).json({
       success: true,
-      message: "Reel status reverted to pending successfully",
+      message: `Reel status updated to '${status}' successfully`,
       reel,
     });
-  } catch (err) {
-    console.error("Error reverting reel:", err);
-    res.status(500).json({ success: false, message: "Internal server error" });
+  } catch (error) {
+    console.error("Error updating reel status:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
   }
 };
+
+
+
 
 exports.likeOrUnlikeReel = async (req, res) => {
     try {

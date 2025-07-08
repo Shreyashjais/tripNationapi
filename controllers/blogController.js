@@ -28,7 +28,6 @@ exports.createBlog = async (req, res) => {
 
     let blog = await Blog.create({
       title,
-      slug,
       content,
       images: uploadedImages,
       tags: parsedTags,
@@ -107,14 +106,13 @@ exports.updateBlog = async (req, res) => {
     const blogId = req.params.id;
     const {
       title,
-      slug,
       content,
       tags,
       readTime,
       sections,
     } = req.body;
 
-    // Parse JSON string fields (for form-data submissions)
+ 
     const parsedTags = typeof tags === "string" ? JSON.parse(tags) : tags;
     const parsedSections = typeof sections === "string" ? JSON.parse(sections) : sections;
     const parsedImagesToDelete = typeof req.body.imagesToDelete === "string"
@@ -126,7 +124,7 @@ exports.updateBlog = async (req, res) => {
       return res.status(404).json({ success: false, message: "Blog not found" });
     }
 
-    // Step 1: Delete selected images
+    //  Delete selected images
     if (parsedImagesToDelete && parsedImagesToDelete.length > 0) {
       for (const img of parsedImagesToDelete) {
         const publicId = typeof img === "string" ? img : img.publicId;
@@ -137,7 +135,7 @@ exports.updateBlog = async (req, res) => {
       }
     }
 
-    // Step 2: Upload new images
+    // Upload new images
     const supportedTypes = ["jpg", "jpeg", "png"];
     const files = req.files?.newImages;
     if (files) {
@@ -157,9 +155,8 @@ exports.updateBlog = async (req, res) => {
       }
     }
 
-    // Step 3: Update text content
+    // Update text content
     blog.title = title || blog.title;
-    blog.slug = slug || blog.slug;
     blog.content = content || blog.content;
     blog.tags = parsedTags || blog.tags;
     blog.sections = parsedSections || blog.sections;
@@ -179,33 +176,6 @@ exports.updateBlog = async (req, res) => {
 };
 
 
-exports.approveBlog = async (req, res) => {
-  try {
-    const blogId = req.params.id;
-
-    const blog = await Blog.findById(blogId);
-    if (!blog) {
-      return res.status(404).json({ success: false, message: "Blog not found" });
-    }
-
- 
-    if (blog.status !== "pending") {
-      return res.status(400).json({ success: false, message: "Blog is already approved or in another state" });
-    }
-
-    blog.status = "approved";
-    await blog.save();
-
-    res.status(200).json({
-      success: true,
-      message: "Blog approved successfully",
-      blog,
-    });
-  } catch (err) {
-    console.error("Error approving blog:", err);
-    res.status(500).json({ success: false, message: "Internal server error" });
-  }
-};
 
 
 exports.deleteBlog = async (req, res) => {
@@ -217,7 +187,7 @@ exports.deleteBlog = async (req, res) => {
       return res.status(404).json({ success: false, message: "Blog not found" });
     }
 
-    // Delete all associated images from Cloudinary
+    // Delete images from Cloudinary
     if (Array.isArray(blog.images)) {
       for (const img of blog.images) {
         if (img.publicId) {
@@ -238,15 +208,28 @@ exports.deleteBlog = async (req, res) => {
     });
   }
 };
-
 exports.getApprovedBlogs = async (req, res) => {
   try {
-    const search = req.query.search || "";
+    const {  category, tags } = req.query;
 
-    const approvedBlogs = await Blog.find({
+    const query = {
       status: "approved",
-      title: { $regex: search, $options: "i" }, 
-    }).populate("createdBy", "name profileImage");
+    };
+
+    // Filter by category (unless "all")
+    if (category && category.toLowerCase() !== "all") {
+      query.category = category;
+    }
+
+    // Filter by one tag (case-insensitive match inside array)
+    if (tags) {
+      query.tags = { $regex: new RegExp(tags.trim(), "i") };
+    }
+
+    const approvedBlogs = await Blog.find(query).populate(
+      "createdBy",
+      "name profileImage"
+    );
 
     res.status(200).json({ success: true, data: approvedBlogs });
   } catch (error) {
@@ -255,30 +238,47 @@ exports.getApprovedBlogs = async (req, res) => {
   }
 };
 
-exports.revertToPending = async (req, res) => {
+
+exports.updateBlogStatus = async (req, res) => {
   try {
     const blogId = req.params.id;
+    const { status } = req.body; // expected: "approved" or "pending"
+
+    if (!["approved", "pending"].includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid status value. Must be 'approved' or 'pending'.",
+      });
+    }
 
     const blog = await Blog.findById(blogId);
     if (!blog) {
-      return res.status(404).json({ success: false, message: "Blog not found" });
+      return res.status(404).json({
+        success: false,
+        message: "Blog not found",
+      });
     }
 
-
-    if (blog.status !== "approved") {
-      return res.status(400).json({ success: false, message: "Only approved blogs can be reverted to pending" });
+    if (blog.status === status) {
+      return res.status(400).json({
+        success: false,
+        message: `Blog is already ${status}`,
+      });
     }
 
-    blog.status = "pending";
+    blog.status = status;
     await blog.save();
 
     res.status(200).json({
       success: true,
-      message: "Blog status reverted to pending successfully",
+      message: `Blog marked as ${status} successfully`,
       blog,
     });
   } catch (err) {
-    console.error("Error reverting blog:", err);
-    res.status(500).json({ success: false, message: "Internal server error" });
+    console.error("Error updating blog status:", err);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
   }
 };

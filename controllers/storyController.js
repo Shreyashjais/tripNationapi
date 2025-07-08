@@ -217,7 +217,6 @@ exports.getApprovedStories = async (req, res) => {
       query.destination = { $regex: new RegExp(destination, "i") };
     }
 
- 
     if (category && category.toLowerCase() !== "all") {
       query.category = category;
     }

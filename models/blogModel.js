@@ -17,7 +17,7 @@ const imageSchema = new mongoose.Schema(
 const sectionSchema = new mongoose.Schema(
   {
     heading: { type: String, required: true },
-    paragraphs: [{ type: String, required: true }],
+    paragraph: { type: String, required: true },
   },
   { _id: false }
 );
@@ -35,7 +35,7 @@ const blogSchema = new mongoose.Schema(
 
     sections: [sectionSchema],
 
-    readTime: { type: Number, required: true },
+    readTime: { type: String, required: true },
     category: {
       type: String,
       enum: ["adventure", "culture", "food and drink", "photography", "relaxation"],
