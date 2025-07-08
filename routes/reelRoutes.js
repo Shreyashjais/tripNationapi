@@ -1,5 +1,5 @@
 const express= require("express");
-const { auth, allowAdminOrSuperAdmin, isCustomer } = require("../middlewares/auth");
+const { auth, allowAdminOrSuperAdmin} = require("../middlewares/auth");
 const { createReel, getAllReels, getSingleReel, getApprovedReels,  likeOrUnlikeReel, editReel, deleteReel, updateReelStatus } = require("../controllers/reelController");
 const router= express.Router();
 
