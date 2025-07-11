@@ -68,7 +68,7 @@ exports.signup = async (req, res) => {
       message: "User created Successfully",
     });
   } catch (error) {
-    console.log(error);
+    console.error(error);
     return res.status(500).json({
       success: false,
       message: "User cannot be registered, please try again later.",
@@ -184,7 +184,7 @@ exports.login = async (req, res) => {
       registeredUser = registeredUser.toObject();
       registeredUser.token = token;
       registeredUser.password = undefined;
-      console.log(registeredUser, "printing registered user");
+     
 
       const options = {
         expires: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),

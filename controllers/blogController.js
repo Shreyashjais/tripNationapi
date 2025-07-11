@@ -129,7 +129,7 @@ exports.updateBlog = async (req, res) => {
       for (const img of parsedImagesToDelete) {
         const publicId = typeof img === "string" ? img : img.publicId;
         if (!publicId) continue;
-        console.log("Deleting image:", publicId);
+
         await deleteFileFromCloudinary(publicId);
         blog.images = blog.images.filter(image => image.publicId !== publicId);
       }
@@ -149,7 +149,7 @@ exports.updateBlog = async (req, res) => {
           });
         }
 
-        console.log("Uploading file to Cloudinary:", file.name);
+    
         const result = await uploadFileToCloudinary(file, "BlogUploads");
         blog.images.push({ url: result.secure_url, publicId: result.public_id });
       }

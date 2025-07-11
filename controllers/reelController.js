@@ -170,7 +170,7 @@ exports.updateReelStatus = async (req, res) => {
 exports.likeOrUnlikeReel = async (req, res) => {
     try {
       const  reelId  = req.params.id;
-      console.log(reelId, "printing")
+    
       const userId = req.user.id;
   
       const reel = await Reel.findById(reelId);
@@ -218,7 +218,7 @@ exports.likeOrUnlikeReel = async (req, res) => {
     try {
       const reelId = req.params.id;
       const  {caption}  = req.body;
-      console.log(caption, "printing")
+    
   
       // Find the reel
       const reel = await Reel.findById(reelId);

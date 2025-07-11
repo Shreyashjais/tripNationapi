@@ -145,7 +145,7 @@ exports.updateStory = async (req, res) => {
         const publicId = typeof img === "string" ? img : img.publicId;
         if (!publicId) continue;
 
-        console.log("Deleting image:", publicId);
+     
         await deleteFileFromCloudinary(publicId);
 
         story.images = story.images.filter(
@@ -169,7 +169,7 @@ exports.updateStory = async (req, res) => {
           });
         }
 
-        console.log("Uploading file to Cloudinary:", file.name);
+      
         const result = await uploadFileToCloudinary(file, "StoryUploads");
         story.images.push({
           url: result.secure_url,

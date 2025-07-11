@@ -15,7 +15,6 @@ exports.auth = (req, res, next) => {
     }
     try {
       const payload = jwt.verify(token, process.env.JWT_SECRET);
-      // console.log(payload);
       req.user = payload;
     } catch (error) {
       return res.status(401).json({
@@ -25,7 +24,7 @@ exports.auth = (req, res, next) => {
     }
     next();
   } catch (error) {
-    console.log(error)
+    console.error(error)
     return res.status(401).json({
       succeess: false,
       message: "Error in fetching the token",

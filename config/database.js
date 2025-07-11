@@ -12,7 +12,7 @@ exports.dbConnect = ()=> {
     })
     .catch((e)=>{
         console.log("Error in DB connection");
-        console.log(e);
+        console.error(e);
         process.exit(1);
     })
 }
