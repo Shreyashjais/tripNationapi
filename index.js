@@ -42,6 +42,8 @@ app.use("/story", storyRoutes)
 const reelRoutes= require("./routes/reelRoutes")
 app.use("/reels", reelRoutes)
 
+
+
 app.listen(3000, ()=>{
     console.log(`Server started on PORT ${PORT} `)
 })
