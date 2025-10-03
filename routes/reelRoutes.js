@@ -12,4 +12,4 @@ router.patch("/likeUnlike/:id",auth,likeOrUnlikeReel )
 router.put("/update/:id", auth, allowAdminOrSuperAdmin, editReel)
 router.delete("/delete/:id", auth , allowAdminOrSuperAdmin, deleteReel)
 
-module.exports=router;
+module.exports=router;  
