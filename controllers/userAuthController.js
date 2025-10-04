@@ -3,6 +3,10 @@ const User = require("../models/userModel");
 const jwt = require("jsonwebtoken");
 const sendOtp = require("../helpers/sendOtp");
 const { isFileTypeSupported, uploadFileToCloudinary, deleteFileFromCloudinary } = require("../helpers/uploadUtils");
+const redis = require("../config/redis")
+
+
+
 
 exports.signup = async (req, res) => {
   try {
@@ -43,9 +47,14 @@ exports.signup = async (req, res) => {
       uploadedImage = await uploadFileToCloudinary(profile, "profileImages");
     }
 
-    const otp = `${Math.floor(100000 + Math.random() * 900000)}`; // 6-digit
+    const otp = `${Math.floor(100000 + Math.random() * 900000)}`; 
+
+   
+
     const hashedOtp = await bcrypt.hash(otp, 10);
-    const otpExpiresIn = new Date(Date.now() + 5 * 60 * 1000); // 5 min validity
+
+    await redis.set(`otp:${email}`, hashedOtp, "EX", 5 * 60); 
+   
 
     const newUser = await User.create({
       name,
@@ -58,8 +67,7 @@ exports.signup = async (req, res) => {
             publicId: uploadedImage.public_id,
           }
         : null,
-      otp: hashedOtp,
-      otpExpiresIn,
+   
       isVerified: false,
     });
      await sendOtp(email, otp);
@@ -77,70 +85,74 @@ exports.signup = async (req, res) => {
 };
 
 
+
 exports.verifyOtp = async (req, res) => {
-    try {
-      const { email, otp } = req.body;
-  
-      // 1. Validate inputs
-      if (!email || !otp) {
-        return res.status(400).json({
-          success: false,
-          message: "Please provide both email and OTP",
-        });
-      }
-  
-      // 2. Find user
-      const user = await User.findOne({ email });
-      if (!user) {
-        return res.status(404).json({
-          success: false,
-          message: "User not found",
-        });
-      }
-  
-      // 3. Already verified?
-      if (user.isVerified) {
-        return res.status(400).json({
-          success: false,
-          message: "User is already verified",
-        });
-      }
-  
-      // 4. Check OTP expiry
-      if (!user.otpExpiresIn || user.otpExpiresIn < new Date()) {
-        return res.status(400).json({
-          success: false,
-          message: "OTP has expired",
-        });
-      }
-  
-      // 5. Compare OTP with hashed version
-      const isOtpValid = await bcrypt.compare(otp, user.otp);
-      if (!isOtpValid) {
-        return res.status(400).json({
-          success: false,
-          message: "Invalid OTP",
-        });
-      }
-  
-      // 6. Mark user as verified
-      user.isVerified = true;
-      user.otp = undefined;
-      user.otpExpiresIn = undefined;
-      await user.save();
-  
-      return res.status(200).json({
-        success: true,
-        message: "User verified successfully",
-      });
-    } catch (error) {
-      console.error("Error verifying OTP:", error);
-      return res.status(500).json({
+  try {
+    const { email, otp } = req.body;
+
+ 
+    if (!email || !otp) {
+      return res.status(400).json({
         success: false,
-        message: "Something went wrong during OTP verification",
+        message: "Please provide both email and OTP",
       });
     }
-  };
+
+  
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+   
+    if (user.isVerified) {
+      return res.status(400).json({
+        success: false,
+        message: "User is already verified",
+      });
+    }
+
+ 
+    const hashedOtpFromRedis = await redis.get(`otp:${email}`);
+    if (!hashedOtpFromRedis) {
+      return res.status(400).json({
+        success: false,
+        message: "OTP has expired or does not exist",
+      });
+    }
+
+   
+    const isOtpValid = await bcrypt.compare(otp, hashedOtpFromRedis);
+    if (!isOtpValid) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid OTP",
+      });
+    }
+
+  
+    user.isVerified = true;
+    await user.save();
+
+  
+    await redis.del(`otp:${email}`);
+
+    return res.status(200).json({
+      success: true,
+      message: "User verified successfully",
+    });
+  } catch (error) {
+    console.error("Error verifying OTP:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Something went wrong during OTP verification",
+    });
+  }
+};
+
 
 exports.login = async (req, res) => {
   try {
@@ -256,7 +268,8 @@ exports.createAdminBySuperAdmin = async (req, res) => {
 
     const otp = `${Math.floor(100000 + Math.random() * 900000)}`;
     const hashedOtp = await bcrypt.hash(otp, 10);
-    const otpExpiresIn = new Date(Date.now() + 5 * 60 * 1000); 
+    await redis.set(`otp:${email}`, hashedOtp, "EX", 5 * 60); // 5 min TTL
+   
 
     const newAdmin = await User.create({
       name,
@@ -269,8 +282,7 @@ exports.createAdminBySuperAdmin = async (req, res) => {
             publicId: uploadedImage.public_id,
           }
         : null,
-      otp: hashedOtp,
-      otpExpiresIn,
+  
       isVerified: false,
     });
 
@@ -293,13 +305,28 @@ exports.getAllUsersExceptSelf = async (req, res) => {
   try {
     const superAdminId = req.user.id;
 
+   
+    const cachedUsers = await redis.get(`users_except_${superAdminId}`);
+    if (cachedUsers) {
+      return res.status(200).json({
+        success: true,
+        users: JSON.parse(cachedUsers),
+        cached: true,
+      });
+    }
+
+  
     const users = await User.find({ _id: { $ne: superAdminId } }).select(
       "-password -otp -otpExpiresIn"
     );
 
+  
+    await redis.set(`users_except_${superAdminId}`, JSON.stringify(users), "EX", 60);
+
     return res.status(200).json({
       success: true,
       users,
+      cached: false,
     });
   } catch (error) {
     console.error("Error fetching users:", error);
