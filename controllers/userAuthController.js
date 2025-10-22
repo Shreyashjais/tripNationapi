@@ -3,7 +3,9 @@ const User = require("../models/userModel");
 const jwt = require("jsonwebtoken");
 const sendOtp = require("../helpers/sendOtp");
 const { isFileTypeSupported, uploadFileToCloudinary, deleteFileFromCloudinary } = require("../helpers/uploadUtils");
-const redis = require("../config/redis")
+// const redis = require("../config/redis")
+
+
 
 
 
@@ -12,12 +14,16 @@ exports.signup = async (req, res) => {
   try {
     const { name, email, password, role } = req.body;
     const profile = req.files?.profileImage;
+
+  
     if (!name || !email || !password) {
       return res.status(400).json({
         success: false,
         message: "Please fill all required fields.",
       });
     }
+
+  
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({
@@ -25,16 +31,11 @@ exports.signup = async (req, res) => {
         message: "User already exists",
       });
     }
-    let hashedPassword;
-    try {
-      hashedPassword = await bcrypt.hash(password, 10);
-    } catch (error) {
-      return res.status(500).json({
-        success: false,
-        message: "Error in hashing password",
-      });
-    }
 
+  
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+  
     let uploadedImage = null;
     if (profile) {
       const supportedTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
@@ -44,18 +45,19 @@ exports.signup = async (req, res) => {
           message: "File format not supported",
         });
       }
+
       uploadedImage = await uploadFileToCloudinary(profile, "profileImages");
     }
 
-    const otp = `${Math.floor(100000 + Math.random() * 900000)}`; 
-
-   
-
+  
+    const otp = `${Math.floor(100000 + Math.random() * 900000)}`;
     const hashedOtp = await bcrypt.hash(otp, 10);
 
-    await redis.set(`otp:${email}`, hashedOtp, "EX", 5 * 60); 
-   
+ 
+    // await redis.set(`otp:${email}`, hashedOtp, "EX", 5 * 60);
+    const otpExpiresIn = Date.now() + 5 * 60 * 1000; 
 
+  
     const newUser = await User.create({
       name,
       email,
@@ -67,13 +69,17 @@ exports.signup = async (req, res) => {
             publicId: uploadedImage.public_id,
           }
         : null,
-   
+      otp: hashedOtp,
+      otpExpiresIn,
       isVerified: false,
     });
-     await sendOtp(email, otp);
+
+
+    await sendOtp(email, otp);
+
     return res.status(200).json({
       success: true,
-      message: "User created Successfully",
+      message: "User created successfully. Please verify OTP sent to your email.",
     });
   } catch (error) {
     console.error(error);
@@ -85,12 +91,11 @@ exports.signup = async (req, res) => {
 };
 
 
-
 exports.verifyOtp = async (req, res) => {
   try {
     const { email, otp } = req.body;
 
- 
+
     if (!email || !otp) {
       return res.status(400).json({
         success: false,
@@ -98,7 +103,7 @@ exports.verifyOtp = async (req, res) => {
       });
     }
 
-  
+
     const user = await User.findOne({ email });
     if (!user) {
       return res.status(404).json({
@@ -107,7 +112,7 @@ exports.verifyOtp = async (req, res) => {
       });
     }
 
-   
+  
     if (user.isVerified) {
       return res.status(400).json({
         success: false,
@@ -115,17 +120,16 @@ exports.verifyOtp = async (req, res) => {
       });
     }
 
- 
-    const hashedOtpFromRedis = await redis.get(`otp:${email}`);
-    if (!hashedOtpFromRedis) {
+  
+    if (!user.otp || !user.otpExpiresIn || Date.now() > user.otpExpiresIn) {
       return res.status(400).json({
         success: false,
         message: "OTP has expired or does not exist",
       });
     }
 
-   
-    const isOtpValid = await bcrypt.compare(otp, hashedOtpFromRedis);
+ 
+    const isOtpValid = await bcrypt.compare(otp, user.otp);
     if (!isOtpValid) {
       return res.status(400).json({
         success: false,
@@ -133,12 +137,11 @@ exports.verifyOtp = async (req, res) => {
       });
     }
 
-  
+   
     user.isVerified = true;
+    user.otp = null;
+    user.otpExpiresIn = null;
     await user.save();
-
-  
-    await redis.del(`otp:${email}`);
 
     return res.status(200).json({
       success: true,
@@ -230,12 +233,14 @@ exports.createAdminBySuperAdmin = async (req, res) => {
     const { name, email, password } = req.body;
     const profile = req.files?.profileImage;
 
+ 
     if (!name || !email || !password) {
       return res.status(400).json({
         success: false,
         message: "Please fill all required fields.",
       });
     }
+
 
     const existingUser = await User.findOne({ email });
     if (existingUser) {
@@ -245,15 +250,10 @@ exports.createAdminBySuperAdmin = async (req, res) => {
       });
     }
 
-    let hashedPassword;
-    try {
-      hashedPassword = await bcrypt.hash(password, 10);
-    } catch (error) {
-      return res.status(500).json({
-        success: false,
-        message: "Error in hashing password",
-      });
-    }
+  
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+  
     let uploadedImage = null;
     if (profile) {
       const supportedTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
@@ -266,25 +266,28 @@ exports.createAdminBySuperAdmin = async (req, res) => {
       uploadedImage = await uploadFileToCloudinary(profile, "profileImages");
     }
 
+
     const otp = `${Math.floor(100000 + Math.random() * 900000)}`;
     const hashedOtp = await bcrypt.hash(otp, 10);
-    await redis.set(`otp:${email}`, hashedOtp, "EX", 5 * 60); // 5 min TTL
-   
+    const otpExpiresIn = Date.now() + 5 * 60 * 1000; 
 
+  
     const newAdmin = await User.create({
       name,
       email,
       password: hashedPassword,
-      role: "admin", 
+      role: "admin",
       profileImage: uploadedImage
         ? {
             url: uploadedImage.secure_url,
             publicId: uploadedImage.public_id,
           }
         : null,
-  
+      otp: hashedOtp,
+      otpExpiresIn,
       isVerified: false,
     });
+
 
     await sendOtp(email, otp);
 
@@ -306,14 +309,14 @@ exports.getAllUsersExceptSelf = async (req, res) => {
     const superAdminId = req.user.id;
 
    
-    const cachedUsers = await redis.get(`users_except_${superAdminId}`);
-    if (cachedUsers) {
-      return res.status(200).json({
-        success: true,
-        users: JSON.parse(cachedUsers),
-        cached: true,
-      });
-    }
+    // const cachedUsers = await redis.get(`users_except_${superAdminId}`);
+    // if (cachedUsers) {
+    //   return res.status(200).json({
+    //     success: true,
+    //     users: JSON.parse(cachedUsers),
+    //     cached: true,
+    //   });
+    // }
 
   
     const users = await User.find({ _id: { $ne: superAdminId } }).select(
@@ -321,7 +324,7 @@ exports.getAllUsersExceptSelf = async (req, res) => {
     );
 
   
-    await redis.set(`users_except_${superAdminId}`, JSON.stringify(users), "EX", 60);
+    // await redis.set(`users_except_${superAdminId}`, JSON.stringify(users), "EX", 60);
 
     return res.status(200).json({
       success: true,

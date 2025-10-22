@@ -1,6 +1,6 @@
 const Blog = require("../models/blogModel");
 const { isFileTypeSupported, uploadFileToCloudinary, deleteFileFromCloudinary } = require("../helpers/uploadUtils");
-const redis = require("../config/redis");
+// const redis = require("../config/redis");
 
 exports.createBlog = async (req, res) => {
   try {
@@ -40,8 +40,8 @@ exports.createBlog = async (req, res) => {
     });
     blog = await blog.populate("createdBy", "name profileImage");
 
-    await redis.del("allBlogs");
-    await redis.del("approvedBlogs");
+    // await redis.del("allBlogs");
+    // await redis.del("approvedBlogs");
     res.status(201).json({
       success: true,
       message: "Blog created successfully",
@@ -57,18 +57,17 @@ exports.createBlog = async (req, res) => {
 exports.getAllBlogs = async (req, res) => {
   try {
     const search = req.query.search || "";
-    const cacheKey = search ? `allBlogs:search:${search}` : "allBlogs";
+    // const cacheKey = search ? `allBlogs:search:${search}` : "allBlogs";
 
-   
-    const cachedBlogs = await redis.get(cacheKey);
-    if (cachedBlogs) {
-      return res.status(200).json({
-        success: true,
-        count: JSON.parse(cachedBlogs).length,
-        blogs: JSON.parse(cachedBlogs),
-        cached: true,
-      });
-    }
+    // const cachedBlogs = await redis.get(cacheKey);
+    // if (cachedBlogs) {
+    //   return res.status(200).json({
+    //     success: true,
+    //     count: JSON.parse(cachedBlogs).length,
+    //     blogs: JSON.parse(cachedBlogs),
+    //     cached: true,
+    //   });
+    // }
 
   
     const blogs = await Blog.find({
@@ -78,13 +77,13 @@ exports.getAllBlogs = async (req, res) => {
       .populate("createdBy", "name profileImage");
 
    
-    await redis.set(cacheKey, JSON.stringify(blogs), "EX", 60);
+    // await redis.set(cacheKey, JSON.stringify(blogs), "EX", 60);
 
     res.status(200).json({
       success: true,
       count: blogs.length,
       blogs,
-      cached: false,
+      // cached: false,
     });
   } catch (err) {
     console.error("Error fetching blogs:", err);
@@ -98,16 +97,16 @@ exports.getAllBlogs = async (req, res) => {
 exports.getBlogById = async (req, res) => {
   try {
     const { id } = req.params;
-    const cacheKey = `blog:${id}`;
-    const cachedBlog = await redis.get(cacheKey);
-    if (cachedBlog) {
-      console.log("✅ Serving blog from Redis cache");
-      return res.status(200).json({
-        success: true,
-        blog: JSON.parse(cachedBlog),
-        cached: true,
-      });
-    }
+    // const cacheKey = `blog:${id}`;
+    // const cachedBlog = await redis.get(cacheKey);
+    // if (cachedBlog) {
+    //   console.log("✅ Serving blog from Redis cache");
+    //   return res.status(200).json({
+    //     success: true,
+    //     blog: JSON.parse(cachedBlog),
+    //     cached: true,
+    //   });
+    // }
 
   
     const blog = await Blog.findById(id).populate("createdBy", "name profileImage");
@@ -120,7 +119,7 @@ exports.getBlogById = async (req, res) => {
     }
 
   
-    await redis.set(cacheKey, JSON.stringify(blog), "EX", 300);
+    // await redis.set(cacheKey, JSON.stringify(blog), "EX", 300);
 
     res.status(200).json({
       success: true,
@@ -147,7 +146,7 @@ exports.updateBlog = async (req, res) => {
       sections,
     } = req.body;
 
- 
+
     const parsedTags = typeof tags === "string" ? JSON.parse(tags) : tags;
     const parsedSections = typeof sections === "string" ? JSON.parse(sections) : sections;
     const parsedImagesToDelete = typeof req.body.imagesToDelete === "string"
@@ -159,7 +158,7 @@ exports.updateBlog = async (req, res) => {
       return res.status(404).json({ success: false, message: "Blog not found" });
     }
 
-    //  Delete selected images
+    //  Delete selected images by deleting it both from db and cloudinary
     if (parsedImagesToDelete && parsedImagesToDelete.length > 0) {
       for (const img of parsedImagesToDelete) {
         const publicId = typeof img === "string" ? img : img.publicId;
@@ -198,7 +197,7 @@ exports.updateBlog = async (req, res) => {
     blog.readTime = readTime || blog.readTime;
 
     await blog.save();
-    await redis.del(`blog:${blogId}`);
+    // await redis.del(`blog:${blogId}`);
 
     return res.status(200).json({
       success: true,
@@ -210,9 +209,6 @@ exports.updateBlog = async (req, res) => {
     return res.status(500).json({ success: false, message: "Internal server error", error: err.message });
   }
 };
-
-
-
 
 
 exports.deleteBlog = async (req, res) => {
@@ -234,7 +230,7 @@ exports.deleteBlog = async (req, res) => {
     }
     // Delete the blog document
     await Blog.findByIdAndDelete(id);
-    await redis.del(`blog:${id}`);
+    // await redis.del(`blog:${id}`);
 
     return res.status(200).json({ success: true, message: "Blog deleted successfully" });
   } catch (error) {
@@ -265,7 +261,7 @@ exports.getApprovedBlogs = async (req, res) => {
     }
 
     const cacheKey = `approvedBlogs:${category || "all"}:${tags || "all"}`;
-    const cached = await redis.get(cacheKey);
+    // const cached = await redis.get(cacheKey);
     if (cached) {
       return res.status(200).json({
         success: true,
@@ -278,7 +274,7 @@ exports.getApprovedBlogs = async (req, res) => {
       "createdBy",
       "name profileImage"
     );
-    await redis.setex(cacheKey, 600, JSON.stringify(approvedBlogs));
+    // await redis.setex(cacheKey, 600, JSON.stringify(approvedBlogs));
 
     res.status(200).json({ success: true, data: approvedBlogs });
   } catch (error) {
@@ -318,10 +314,10 @@ exports.updateBlogStatus = async (req, res) => {
     blog.status = status;
     await blog.save();
 
-    const keys = await redis.keys("approvedBlogs*");
-    if (keys.length > 0) {
-      await redis.del(keys);
-    }
+    // const keys = await redis.keys("approvedBlogs*");
+    // if (keys.length > 0) {
+    //   await redis.del(keys);
+    // }
 
     res.status(200).json({
       success: true,
