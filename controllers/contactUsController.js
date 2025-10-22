@@ -37,23 +37,38 @@ exports.postContactUs = async (req, res) => {
 };
 
 exports.getAllContactMessages = async (req, res) => {
-    try {
-      const contacts = await Contact.find().sort({ createdAt: -1 });
-  
-      return res.status(200).json({
-        success: true,
-        count: contacts.length,
-        data: contacts,
-      });
-    } catch (error) {
-      console.error("Error fetching contact messages:", error);
-      return res.status(500).json({
-        success: false,
-        message: "Internal server error",
-        error: error.message,
-      });
-    }
-  };
+  try {
+    const page = parseInt(req.query.page) || 1; 
+    const limit = parseInt(req.query.limit) || 20;
+    const skip = (page - 1) * limit;
+
+ 
+    const totalMessages = await Contact.countDocuments();
+
+   
+    const contacts = await Contact.find()
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    return res.status(200).json({
+      success: true,
+      count: contacts.length, 
+      total: totalMessages, 
+      page,
+      totalPages: Math.ceil(totalMessages / limit),
+      data: contacts,
+    });
+  } catch (error) {
+    console.error("Error fetching contact messages:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+};
+
 
 exports.getContactMessageById = async (req, res) => {
     try {

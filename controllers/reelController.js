@@ -57,19 +57,34 @@ exports.createReel = async (req, res) => {
 
 exports.getAllReels = async (req, res) => {
   try {
+    const page = parseInt(req.query.page) || 1; 
+    const limit = parseInt(req.query.limit) || 20; 
+    const skip = (page - 1) * limit;
+
+ 
+    const totalReels = await Reel.countDocuments();
+
+   
     const reels = await Reel.find()
       .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
       .populate("createdBy", "name profileImage");
 
     res.status(200).json({
       success: true,
-      reels,
+      count: reels.length,    
+      total: totalReels,     
+      page,                 
+      totalPages: Math.ceil(totalReels / limit),
+      reels,                
     });
   } catch (error) {
     console.error("Get All Reels Error:", error);
     res.status(500).json({ success: false, message: "Server error" });
   }
 };
+
 
 exports.getSingleReel = async (req, res) => {
   try {

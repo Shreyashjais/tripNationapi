@@ -1,6 +1,5 @@
 const Blog = require("../models/blogModel");
 const { isFileTypeSupported, uploadFileToCloudinary, deleteFileFromCloudinary } = require("../helpers/uploadUtils");
-// const redis = require("../config/redis");
 
 exports.createBlog = async (req, res) => {
   try {
@@ -53,37 +52,33 @@ exports.createBlog = async (req, res) => {
   }
 };
 
-
 exports.getAllBlogs = async (req, res) => {
   try {
     const search = req.query.search || "";
-    // const cacheKey = search ? `allBlogs:search:${search}` : "allBlogs";
-
-    // const cachedBlogs = await redis.get(cacheKey);
-    // if (cachedBlogs) {
-    //   return res.status(200).json({
-    //     success: true,
-    //     count: JSON.parse(cachedBlogs).length,
-    //     blogs: JSON.parse(cachedBlogs),
-    //     cached: true,
-    //   });
-    // }
+    const page = parseInt(req.query.page) || 1; 
+    const limit = parseInt(req.query.limit) || 20; 
+    const skip = (page - 1) * limit;
 
   
-    const blogs = await Blog.find({
-      title: { $regex: search, $options: "i" },
-    })
-      .sort({ createdAt: -1 })
-      .populate("createdBy", "name profileImage");
+    const query = { title: { $regex: search, $options: "i" } };
 
    
-    // await redis.set(cacheKey, JSON.stringify(blogs), "EX", 60);
+    const totalBlogs = await Blog.countDocuments(query);
+
+    
+    const blogs = await Blog.find(query)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .populate("createdBy", "name profileImage");
 
     res.status(200).json({
       success: true,
       count: blogs.length,
+      total: totalBlogs,
+      page,
+      totalPages: Math.ceil(totalBlogs / limit),
       blogs,
-      // cached: false,
     });
   } catch (err) {
     console.error("Error fetching blogs:", err);
@@ -93,6 +88,7 @@ exports.getAllBlogs = async (req, res) => {
     });
   }
 };
+
 
 exports.getBlogById = async (req, res) => {
   try {
@@ -242,41 +238,47 @@ exports.deleteBlog = async (req, res) => {
     });
   }
 };
+
 exports.getApprovedBlogs = async (req, res) => {
   try {
-    const {  category, tags } = req.query;
+    const { category, tags } = req.query;
 
-    const query = {
-      status: "approved",
-    };
+    const page = parseInt(req.query.page) || 1; 
+    const limit = parseInt(req.query.limit) || 20; 
+    const skip = (page - 1) * limit;
 
-    
+
+    const query = { status: "approved" };
+
     if (category && category.toLowerCase() !== "all") {
       query.category = category;
     }
 
-   
     if (tags) {
       query.tags = { $regex: new RegExp(tags.trim(), "i") };
     }
 
-    const cacheKey = `approvedBlogs:${category || "all"}:${tags || "all"}`;
-    // const cached = await redis.get(cacheKey);
-    if (cached) {
-      return res.status(200).json({
-        success: true,
-        data: JSON.parse(cached),
-        cached: true,
-      });
-    }
+    const cacheKey = `approvedBlogs:${category || "all"}:${tags || "all"}:page:${page}`;
 
-    const approvedBlogs = await Blog.find(query).populate(
-      "createdBy",
-      "name profileImage"
-    );
-    // await redis.setex(cacheKey, 600, JSON.stringify(approvedBlogs));
+    const totalBlogs = await Blog.countDocuments(query);
 
-    res.status(200).json({ success: true, data: approvedBlogs });
+    const approvedBlogs = await Blog.find(query)
+      .populate("createdBy", "name profileImage")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+ 
+
+    res.status(200).json({
+      success: true,
+      count: approvedBlogs.length,
+      total: totalBlogs,
+      page,
+      totalPages: Math.ceil(totalBlogs / limit),
+      data: approvedBlogs,
+  
+    });
   } catch (error) {
     console.error("Error fetching approved blogs:", error);
     res.status(500).json({ success: false, message: "Server error" });

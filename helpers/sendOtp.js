@@ -17,9 +17,9 @@ const sendOtp = async (email, otp) => {
 
     // Email content
     const mailOptions = {
-      from: `"TripNation" <${process.env.MAIL_USER}>`,
+      from: `"TripOnation" <${process.env.MAIL_USER}>`,
       to: email,
-      subject: "Your OTP for TripNation Signup",
+      subject: "Your OTP for TripOnation Signup",
       html: `
         <h2>OTP Verification</h2>
         <p>Your OTP is: <b>${otp}</b></p>
