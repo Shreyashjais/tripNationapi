@@ -57,27 +57,39 @@ exports.createReel = async (req, res) => {
 
 exports.getAllReels = async (req, res) => {
   try {
-    const page = parseInt(req.query.page) || 1; 
-    const limit = parseInt(req.query.limit) || 20; 
+    const status = req.query.status;          
+    const search = req.query.search || "";    
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
     const skip = (page - 1) * limit;
 
- 
-    const totalReels = await Reel.countDocuments();
 
-   
-    const reels = await Reel.find()
+    const query = {};
+    if (status) query.status = status; 
+    if (search) query.caption = { $regex: search, $options: "i" }; 
+
+
+    const totalReels = await Reel.countDocuments(query);
+
+    
+    const reels = await Reel.find(query)
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
       .populate("createdBy", "name profileImage");
 
+    const totalPages = Math.ceil(totalReels / limit);
+
     res.status(200).json({
       success: true,
-      count: reels.length,    
-      total: totalReels,     
-      page,                 
-      totalPages: Math.ceil(totalReels / limit),
-      reels,                
+      count: reels.length,
+      total: totalReels,
+      page,
+      limit,
+      totalPages,
+      hasNext: page < totalPages,
+      hasPrev: page > 1,
+      reels,
     });
   } catch (error) {
     console.error("Get All Reels Error:", error);

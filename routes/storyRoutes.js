@@ -1,7 +1,7 @@
 const express = require("express")
 const router= express.Router();
 
-const {createStory, getAllStory, getStoryById, approveStory, getApprovedStories, revertToPending, deleteStory, updateStory, updateStoryStatus }= require("../controllers/storyController");
+const {createStory, getAllStory, getStoryById, getApprovedStories,  deleteStory, updateStory, updateStoryStatus }= require("../controllers/storyController");
 const { auth, allowAdminOrSuperAdmin } = require("../middlewares/auth");
 
 router.post("/createStory",auth, createStory)

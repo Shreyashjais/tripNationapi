@@ -55,29 +55,34 @@ exports.createBlog = async (req, res) => {
 exports.getAllBlogs = async (req, res) => {
   try {
     const search = req.query.search || "";
-    const page = parseInt(req.query.page) || 1; 
-    const limit = parseInt(req.query.limit) || 20; 
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
     const skip = (page - 1) * limit;
 
-  
-    const query = { title: { $regex: search, $options: "i" } };
+    const status = req.query.status; 
 
-   
+    const query = { title: { $regex: search, $options: "i" } };
+    if (status) query.status = status; 
+
     const totalBlogs = await Blog.countDocuments(query);
 
-    
     const blogs = await Blog.find(query)
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
       .populate("createdBy", "name profileImage");
 
+    const totalPages = Math.ceil(totalBlogs / limit);
+
     res.status(200).json({
       success: true,
-      count: blogs.length,
-      total: totalBlogs,
-      page,
-      totalPages: Math.ceil(totalBlogs / limit),
+      count: blogs.length,      
+      total: totalBlogs,       
+      page,                    
+      limit,               
+      totalPages,           
+      hasNext: page < totalPages,
+      hasPrev: page > 1,
       blogs,
     });
   } catch (err) {
@@ -88,6 +93,8 @@ exports.getAllBlogs = async (req, res) => {
     });
   }
 };
+
+
 
 
 exports.getBlogById = async (req, res) => {
@@ -243,10 +250,9 @@ exports.getApprovedBlogs = async (req, res) => {
   try {
     const { category, tags } = req.query;
 
-    const page = parseInt(req.query.page) || 1; 
-    const limit = parseInt(req.query.limit) || 20; 
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
     const skip = (page - 1) * limit;
-
 
     const query = { status: "approved" };
 
@@ -255,12 +261,11 @@ exports.getApprovedBlogs = async (req, res) => {
     }
 
     if (tags) {
-      query.tags = { $regex: new RegExp(tags.trim(), "i") };
+      query.tags = { $elemMatch: { $regex: new RegExp(tags.trim(), "i") } };
     }
 
-    const cacheKey = `approvedBlogs:${category || "all"}:${tags || "all"}:page:${page}`;
-
     const totalBlogs = await Blog.countDocuments(query);
+    const totalPages = Math.ceil(totalBlogs / limit);
 
     const approvedBlogs = await Blog.find(query)
       .populate("createdBy", "name profileImage")
@@ -268,22 +273,24 @@ exports.getApprovedBlogs = async (req, res) => {
       .skip(skip)
       .limit(limit);
 
- 
-
     res.status(200).json({
       success: true,
       count: approvedBlogs.length,
       total: totalBlogs,
       page,
-      totalPages: Math.ceil(totalBlogs / limit),
+      limit,
+      totalPages,
+      hasNext: page < totalPages,
+      hasPrev: page > 1,
       data: approvedBlogs,
-  
     });
+
   } catch (error) {
     console.error("Error fetching approved blogs:", error);
     res.status(500).json({ success: false, message: "Server error" });
   }
 };
+
 
 
 exports.updateBlogStatus = async (req, res) => {

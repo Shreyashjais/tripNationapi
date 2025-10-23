@@ -38,26 +38,43 @@ exports.postContactUs = async (req, res) => {
 
 exports.getAllContactMessages = async (req, res) => {
   try {
-    const page = parseInt(req.query.page) || 1; 
-    const limit = parseInt(req.query.limit) || 20;
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.max(1, parseInt(req.query.limit) || 20);
     const skip = (page - 1) * limit;
 
- 
-    const totalMessages = await Contact.countDocuments();
+    const status = req.query.status; 
+    const validStatuses = ["pending", "closed"];
 
-   
-    const contacts = await Contact.find()
+    if (status && !validStatuses.includes(status.toLowerCase())) {
+      return res.status(400).json({
+        success: false,
+        message: `Invalid status. Allowed statuses: ${validStatuses.join(", ")}`,
+      });
+    }
+
+    const query = {};
+    if (status) query.status = status.toLowerCase();
+
+
+    const totalMessages = await Contact.countDocuments(query);
+
+    const contacts = await Contact.find(query)
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
 
+    const totalPages = Math.ceil(totalMessages / limit);
+
     return res.status(200).json({
       success: true,
-      count: contacts.length, 
-      total: totalMessages, 
-      page,
-      totalPages: Math.ceil(totalMessages / limit),
       data: contacts,
+      count: contacts.length,
+      total: totalMessages,
+      page,
+      limit,
+      totalPages,
+      hasNext: page < totalPages,
+      hasPrev: page > 1,
     });
   } catch (error) {
     console.error("Error fetching contact messages:", error);

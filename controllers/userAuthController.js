@@ -308,27 +308,55 @@ exports.getAllUsersExceptSelf = async (req, res) => {
   try {
     const superAdminId = req.user.id;
 
-   
-    // const cachedUsers = await redis.get(`users_except_${superAdminId}`);
-    // if (cachedUsers) {
-    //   return res.status(200).json({
-    //     success: true,
-    //     users: JSON.parse(cachedUsers),
-    //     cached: true,
-    //   });
-    // }
+    // Query params
+    const role = req.query.role;
+    const search = req.query.search || "";
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.max(1, parseInt(req.query.limit) || 20);
+    const skip = (page - 1) * limit;
 
-  
-    const users = await User.find({ _id: { $ne: superAdminId } }).select(
-      "-password -otp -otpExpiresIn"
-    );
+    // Validate role
+    const validRoles = ["admin", "customer"];
+    if (role && !validRoles.includes(role)) {
+      return res.status(400).json({
+        success: false,
+        message: `Invalid role. Allowed roles: ${validRoles.join(", ")}`,
+      });
+    }
 
-  
-    // await redis.set(`users_except_${superAdminId}`, JSON.stringify(users), "EX", 60);
+    // Build query
+    const query = { _id: { $ne: superAdminId } };
+    if (role) query.role = role;
+
+    if (search.trim()) {
+      query.$or = [
+        { name: { $regex: search, $options: "i" } },
+        { email: { $regex: search, $options: "i" } },
+      ];
+    }
+
+    // Total matching users
+    const totalUsers = await User.countDocuments(query);
+
+    // Fetch users with pagination
+    const users = await User.find(query)
+      .skip(skip)
+      .limit(limit)
+      .select("-password -otp -otpExpiresIn")
+      .sort({ createdAt: -1 });
+
+    const totalPages = Math.ceil(totalUsers / limit);
 
     return res.status(200).json({
       success: true,
       users,
+      count: users.length,
+      total: totalUsers,
+      page,
+      limit,
+      totalPages,
+      hasNext: page < totalPages,
+      hasPrev: page > 1,
       cached: false,
     });
   } catch (error) {

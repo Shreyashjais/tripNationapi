@@ -63,27 +63,35 @@ exports.createStory = async (req, res) => {
 
 exports.getAllStory = async (req, res) => {
   try {
+    const search = req.query.search || "";
+    const status = req.query.status; 
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 20;
     const skip = (page - 1) * limit;
 
-   
-    const totalStories = await Story.countDocuments();
+    const query = { title: { $regex: search, $options: "i" } };
+    if (status) query.status = status;
 
-  
-    const stories = await Story.find()
+    const totalStories = await Story.countDocuments(query);
+
+    const stories = await Story.find(query)
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
       .populate("createdBy", "name profileImage");
 
+    const totalPages = Math.ceil(totalStories / limit);
+
     res.status(200).json({
       success: true,
-      count: stories.length,    
-      total: totalStories,     
-      page,                     
-      totalPages: Math.ceil(totalStories / limit),
-      stories,                    
+      count: stories.length,
+      total: totalStories,
+      page,
+      limit,
+      totalPages,
+      hasNext: page < totalPages,
+      hasPrev: page > 1,
+      stories,
     });
   } catch (err) {
     console.error("Error fetching stories:", err);
@@ -93,6 +101,7 @@ exports.getAllStory = async (req, res) => {
     });
   }
 };
+
 
 
 exports.getStoryById = async (req, res) => {
@@ -227,6 +236,7 @@ exports.getApprovedStories = async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 20;
     const skip = (page - 1) * limit;
+
     const query = { status: "approved" };
 
     if (destination) {
@@ -239,27 +249,34 @@ exports.getApprovedStories = async (req, res) => {
 
    
     const totalStories = await Story.countDocuments(query);
+    const totalPages = Math.ceil(totalStories / limit);
 
- 
+   
     const approvedStories = await Story.find(query)
+      .populate("createdBy", "name profileImage")
       .sort({ createdAt: -1 })
       .skip(skip)
-      .limit(limit)
-      .populate("createdBy", "name profileImage");
+      .limit(limit);
 
+   
     res.status(200).json({
       success: true,
-      count: approvedStories.length, 
-      total: totalStories,        
-      page,                         
-      totalPages: Math.ceil(totalStories / limit),
-      data: approvedStories,        
+      count: approvedStories.length,
+      total: totalStories,
+      page,
+      limit,
+      totalPages,
+      hasNext: page < totalPages,
+      hasPrev: page > 1,
+      data: approvedStories,
     });
+
   } catch (error) {
     console.error("Error fetching approved stories:", error);
     res.status(500).json({ success: false, message: "Server error" });
   }
 };
+
 
 exports.updateStoryStatus = async (req, res) => {
   try {
