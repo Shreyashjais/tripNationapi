@@ -129,14 +129,25 @@ exports.getSingleReel = async (req, res) => {
 
 exports.getApprovedReels = async (req, res) => {
   try {
+    const page = parseInt(req.query.page) || 1;       
+    const limit = parseInt(req.query.limit) || 5;   
+    const skip = (page - 1) * limit;
+
     const approvedReels = await Reel.find({ status: "approved" })
       .populate("createdBy", "name profileImage")
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    const totalReels = await Reel.countDocuments({ status: "approved" });
 
     res.status(200).json({
       success: true,
       message: "Approved reels fetched successfully",
       reels: approvedReels,
+      totalReels,
+      currentPage: page,
+      totalPages: Math.ceil(totalReels / limit),
     });
   } catch (error) {
     console.error("Error fetching approved reels:", error);
@@ -146,6 +157,7 @@ exports.getApprovedReels = async (req, res) => {
     });
   }
 };
+
 
 exports.updateReelStatus = async (req, res) => {
   try {

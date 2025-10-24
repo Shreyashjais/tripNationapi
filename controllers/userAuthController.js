@@ -194,7 +194,7 @@ exports.login = async (req, res) => {
     );
     if (isPasswordMatch) {
       let token = await jwt.sign(payload, process.env.JWT_SECRET, {
-        expiresIn: "2h",
+        // expiresIn: "2h",
       });
       registeredUser = registeredUser.toObject();
       registeredUser.token = token;

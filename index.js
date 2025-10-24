@@ -47,6 +47,6 @@ app.use("/reels", reelRoutes)
 
 
 
-app.listen(3000, ()=>{
+app.listen(PORT, ()=>{
     console.log(`Server started on PORT ${PORT} `)
 })
