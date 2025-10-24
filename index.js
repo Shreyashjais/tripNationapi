@@ -4,7 +4,7 @@ const app= express();
 const cors = require("cors");
 
 app.use(cors({
-  origin: "http://localhost:3001", 
+  origin: "https://tripnation-git-main-shreyash-jaiswals-projects.vercel.app/", 
   credentials: true, 
 }));
 
