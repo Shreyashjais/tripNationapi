@@ -1,7 +1,7 @@
 const bcrypt = require("bcrypt");
 const User = require("../models/userModel");
 const jwt = require("jsonwebtoken");
-const sendOtp = require("../helpers/sendOtp");
+// const sendOtp = require("../helpers/sendOtp");
 const { isFileTypeSupported, uploadFileToCloudinary, deleteFileFromCloudinary } = require("../helpers/uploadUtils");
 // const redis = require("../config/redis")
 
@@ -23,7 +23,7 @@ exports.signup = async (req, res) => {
       });
     }
 
-  
+ 
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({
@@ -32,10 +32,10 @@ exports.signup = async (req, res) => {
       });
     }
 
-  
+ 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-  
+   
     let uploadedImage = null;
     if (profile) {
       const supportedTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
@@ -49,15 +49,6 @@ exports.signup = async (req, res) => {
       uploadedImage = await uploadFileToCloudinary(profile, "profileImages");
     }
 
-  
-    const otp = `${Math.floor(100000 + Math.random() * 900000)}`;
-    const hashedOtp = await bcrypt.hash(otp, 10);
-
- 
-    // await redis.set(`otp:${email}`, hashedOtp, "EX", 5 * 60);
-    const otpExpiresIn = Date.now() + 5 * 60 * 1000; 
-
-  
     const newUser = await User.create({
       name,
       email,
@@ -69,17 +60,19 @@ exports.signup = async (req, res) => {
             publicId: uploadedImage.public_id,
           }
         : null,
-      otp: hashedOtp,
-      otpExpiresIn,
-      isVerified: false,
+      isVerified: true, 
     });
-
-
-    await sendOtp(email, otp);
 
     return res.status(200).json({
       success: true,
-      message: "User created successfully. Please verify OTP sent to your email.",
+      message: "User created successfully. You can now log in.",
+      user: {
+        id: newUser._id,
+        name: newUser.name,
+        email: newUser.email,
+        role: newUser.role,
+        profileImage: newUser.profileImage,
+      },
     });
   } catch (error) {
     console.error(error);
@@ -89,6 +82,7 @@ exports.signup = async (req, res) => {
     });
   }
 };
+
 
 
 exports.verifyOtp = async (req, res) => {
