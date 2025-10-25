@@ -3,10 +3,25 @@ const app= express();
 
 const cors = require("cors");
 
+const allowedOrigins = [
+  "https://tripnation.vercel.app",
+  "https://www.triponation.com"
+];
+
 app.use(cors({
-  origin: "https://tripnation.vercel.app", 
-  credentials: true, 
+  origin: function (origin, callback) {
+  
+    if (!origin) return callback(null, true); 
+
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
+  credentials: true,
 }));
+
 
 require("dotenv").config();
 const PORT= process.env.PORT || 3000;
