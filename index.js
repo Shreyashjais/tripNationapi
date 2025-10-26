@@ -5,7 +5,8 @@ const cors = require("cors");
 
 const allowedOrigins = [
   "https://tripnation.vercel.app",
-  "https://www.triponation.com"
+  "https://www.triponation.com",
+  "http://localhost:3001" 
 ];
 
 app.use(cors({
