@@ -5,20 +5,16 @@ const {
   deleteEnquiry,
   toggleEnquiryStatus,
 } = require("../controllers/enquiryController");
+const { auth, allowAdminOrSuperAdmin } = require("../middlewares/auth");
 
 const router = express.Router();
 
-router.get("/", getAllEnquiries);
+router.get("/", auth, allowAdminOrSuperAdmin, getAllEnquiries);
 
 router.post("/", createEnquiry);
 
+router.delete("/:id", auth, allowAdminOrSuperAdmin, deleteEnquiry);
 
-
-
-
-router.delete("/:id", deleteEnquiry);
-
-
-router.patch("/:id/status", toggleEnquiryStatus);
+router.patch("/:id/status", auth, allowAdminOrSuperAdmin, toggleEnquiryStatus);
 
 module.exports = router;
