@@ -58,8 +58,8 @@ app.use("/story", storyRoutes)
 const reelRoutes= require("./routes/reelRoutes")
 app.use("/reels", reelRoutes)
 
-
-
+const enquiryRoutes= require("./routes/enquiryRoutes")
+app.use("/enquiry", enquiryRoutes)
 
 
 
