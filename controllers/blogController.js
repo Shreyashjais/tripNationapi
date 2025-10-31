@@ -3,27 +3,54 @@ const { isFileTypeSupported, uploadFileToCloudinary, deleteFileFromCloudinary } 
 
 exports.createBlog = async (req, res) => {
   try {
-    const { title,  content, tags, category, destination, readTime, sections } = req.body;
+    const {
+      title,
+      content,
+      tags,
+      category,
+      destination,
+      readTime,
+      sections,
+      metaTitle,
+      metaDescription,
+      keywords,
+      company,
+    } = req.body;
 
-    const parsedTags = typeof tags === "string" ? tags.split(",").map(t => t.trim()) : tags;
-    const parsedSections = typeof sections === "string" ? JSON.parse(sections) : sections;
+    const parsedTags =
+      typeof tags === "string" ? tags.split(",").map((t) => t.trim()) : tags;
+
+    const parsedSections =
+      typeof sections === "string" ? JSON.parse(sections) : sections;
+
+    const parsedKeywords =
+      typeof keywords === "string"
+        ? keywords.split(",").map((k) => k.trim())
+        : keywords;
 
     const supportedTypes = ["jpg", "jpeg", "png"];
     const files =
-    req.files && req.files.images
-      ? Array.isArray(req.files.images)
-        ? req.files.images
-        : [req.files.images]
-      : [];
+      req.files && req.files.images
+        ? Array.isArray(req.files.images)
+          ? req.files.images
+          : [req.files.images]
+        : [];
+
     const uploadedImages = [];
 
     for (const file of files) {
       const fileType = file.name.split(".").pop().toLowerCase();
       if (!isFileTypeSupported(fileType, supportedTypes)) {
-        return res.status(400).json({ success: false, message: `Unsupported image type: ${fileType}` });
+        return res
+          .status(400)
+          .json({ success: false, message: `Unsupported image type: ${fileType}` });
       }
+
       const result = await uploadFileToCloudinary(file, "BlogUploads");
-      uploadedImages.push({ url: result.secure_url, publicId: result.public_id });
+      uploadedImages.push({
+        url: result.secure_url,
+        publicId: result.public_id,
+      });
     }
 
     let blog = await Blog.create({
@@ -35,12 +62,15 @@ exports.createBlog = async (req, res) => {
       readTime,
       createdBy: req.user.id,
       category,
-      destination
+      destination,
+      metaTitle,
+      metaDescription,
+      keywords: parsedKeywords,
+      company: company || "Trip'O'Nation",
     });
+
     blog = await blog.populate("createdBy", "name profileImage");
 
-    // await redis.del("allBlogs");
-    // await redis.del("approvedBlogs");
     res.status(201).json({
       success: true,
       message: "Blog created successfully",
@@ -51,6 +81,7 @@ exports.createBlog = async (req, res) => {
     res.status(500).json({ success: false, message: "Server error" });
   }
 };
+
 
 exports.getAllBlogs = async (req, res) => {
   try {
@@ -94,22 +125,38 @@ exports.getAllBlogs = async (req, res) => {
   }
 };
 
+exports.getBlogBySlug = async (req, res) => {
+  try {
+    const { slug } = req.params;
+
+  
+    let blog = await Blog.findOne({ slug }).populate("createdBy", "name profileImage");
+
+    if (!blog) {
+      return res.status(404).json({ success: false, message: "Blog not found" });
+    }
+
+ 
+    blog.views = (blog.views || 0) + 1;
+    await blog.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Blog fetched successfully",
+      blog,
+    });
+  } catch (err) {
+    console.error("Error fetching blog by slug:", err);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
 
 
 
 exports.getBlogById = async (req, res) => {
   try {
     const { id } = req.params;
-    // const cacheKey = `blog:${id}`;
-    // const cachedBlog = await redis.get(cacheKey);
-    // if (cachedBlog) {
-    //   console.log("✅ Serving blog from Redis cache");
-    //   return res.status(200).json({
-    //     success: true,
-    //     blog: JSON.parse(cachedBlog),
-    //     cached: true,
-    //   });
-    // }
+   
 
   
     const blog = await Blog.findById(id).populate("createdBy", "name profileImage");
@@ -121,13 +168,10 @@ exports.getBlogById = async (req, res) => {
       });
     }
 
-  
-    // await redis.set(cacheKey, JSON.stringify(blog), "EX", 300);
 
     res.status(200).json({
       success: true,
       blog,
-      cached: false,
     });
   } catch (err) {
     console.error("Error fetching blog by ID:", err);
@@ -147,28 +191,32 @@ exports.updateBlog = async (req, res) => {
       tags,
       readTime,
       sections,
+      metaTitle,
+      metaDescription,
+      keywords,
+      company,
     } = req.body;
-
 
     const parsedTags = typeof tags === "string" ? JSON.parse(tags) : tags;
     const parsedSections = typeof sections === "string" ? JSON.parse(sections) : sections;
-    const parsedImagesToDelete = typeof req.body.imagesToDelete === "string"
-      ? JSON.parse(req.body.imagesToDelete)
-      : req.body.imagesToDelete;
+    const parsedImagesToDelete =
+      typeof req.body.imagesToDelete === "string"
+        ? JSON.parse(req.body.imagesToDelete)
+        : req.body.imagesToDelete;
 
     const blog = await Blog.findById(blogId);
     if (!blog) {
       return res.status(404).json({ success: false, message: "Blog not found" });
     }
 
-    //  Delete selected images by deleting it both from db and cloudinary
+    //  Delete selected images (both from db and cloudinary)
     if (parsedImagesToDelete && parsedImagesToDelete.length > 0) {
       for (const img of parsedImagesToDelete) {
         const publicId = typeof img === "string" ? img : img.publicId;
         if (!publicId) continue;
 
         await deleteFileFromCloudinary(publicId);
-        blog.images = blog.images.filter(image => image.publicId !== publicId);
+        blog.images = blog.images.filter((image) => image.publicId !== publicId);
       }
     }
 
@@ -186,21 +234,32 @@ exports.updateBlog = async (req, res) => {
           });
         }
 
-    
         const result = await uploadFileToCloudinary(file, "BlogUploads");
-        blog.images.push({ url: result.secure_url, publicId: result.public_id });
+        blog.images.push({
+          url: result.secure_url,
+          publicId: result.public_id,
+        });
       }
     }
 
-    // Update text content
+    // 🧩 Update text + new SEO fields
     blog.title = title || blog.title;
     blog.content = content || blog.content;
     blog.tags = parsedTags || blog.tags;
     blog.sections = parsedSections || blog.sections;
     blog.readTime = readTime || blog.readTime;
 
+    // 🔹 New fields
+    blog.metaTitle = metaTitle || blog.metaTitle;
+    blog.metaDescription = metaDescription || blog.metaDescription;
+    blog.keywords = keywords
+      ? typeof keywords === "string"
+        ? JSON.parse(keywords)
+        : keywords
+      : blog.keywords;
+    blog.company = company || blog.company;
+
     await blog.save();
-    // await redis.del(`blog:${blogId}`);
 
     return res.status(200).json({
       success: true,
@@ -209,9 +268,14 @@ exports.updateBlog = async (req, res) => {
     });
   } catch (err) {
     console.error("Update Blog error:", err);
-    return res.status(500).json({ success: false, message: "Internal server error", error: err.message });
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: err.message,
+    });
   }
 };
+
 
 
 exports.deleteBlog = async (req, res) => {
@@ -338,6 +402,46 @@ exports.updateBlogStatus = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Internal server error",
+    });
+  }
+};
+
+
+exports.toggleBlogLike = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const blogId = req.params.id;
+
+    const blog = await Blog.findById(blogId);
+    if (!blog) {
+      return res.status(404).json({ success: false, message: "Blog not found" });
+    }
+
+   
+    const alreadyLiked = blog.likes.includes(userId);
+
+    if (alreadyLiked) {
+   
+      blog.likes = blog.likes.filter((id) => id.toString() !== userId.toString());
+    } else {
+  
+      blog.likes.push(userId);
+    }
+
+    await blog.save();
+
+    return res.status(200).json({
+      success: true,
+      message: alreadyLiked ? "Blog unliked successfully" : "Blog liked successfully",
+      liked: !alreadyLiked,
+      totalLikes: blog.likes.length,
+    });
+  } catch (err) {
+    console.error("Error toggling blog like:", err);
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+      error: err.message,
     });
   }
 };
