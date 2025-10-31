@@ -9,6 +9,8 @@ const {
   deleteBlog,
   getApprovedBlogs,
   updateBlogStatus,
+  getBlogBySlug,
+  toggleBlogLike,
 } = require("../controllers/blogController");
 const { auth, allowAdminOrSuperAdmin } = require("../middlewares/auth");
 
@@ -16,11 +18,13 @@ const { auth, allowAdminOrSuperAdmin } = require("../middlewares/auth");
 router.post("/create", auth, createBlog);
 router.get("/allBlogs", auth, allowAdminOrSuperAdmin, getAllBlogs);
 router.get("/approvedBlogs", getApprovedBlogs);
+router.get("/:slug", getBlogBySlug)
 
 
 router.get("/:id", getBlogById);
 router.put("/update/:id", auth, allowAdminOrSuperAdmin, updateBlog);
 router.delete("/delete/:id", auth, allowAdminOrSuperAdmin, deleteBlog);
 router.patch("/:id", auth, allowAdminOrSuperAdmin, updateBlogStatus);
+router.patch("/:id/like", auth, toggleBlogLike); 
 
 module.exports = router;
