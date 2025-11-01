@@ -13,7 +13,7 @@ const router = express.Router();
 router.post("/", auth,  createReview);
 
 
-router.get("/", auth, allowAdminOrSuperAdmin ,getReviews);
+router.get("/", auth, getReviews);
 
 
 router.delete("/:id", auth, allowAdminOrSuperAdmin,  deleteReview);
