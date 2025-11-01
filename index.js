@@ -61,6 +61,9 @@ app.use("/reels", reelRoutes)
 const enquiryRoutes= require("./routes/enquiryRoutes")
 app.use("/enquiry", enquiryRoutes)
 
+const reviewRoutes = require("./routes/reviewRoutes")
+app.use("/reviews", reviewRoutes)
+
 
 
 app.listen(PORT, ()=>{

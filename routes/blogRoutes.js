@@ -11,6 +11,7 @@ const {
   updateBlogStatus,
   getBlogBySlug,
   toggleBlogLike,
+  searchBlogs,
 } = require("../controllers/blogController");
 const { auth, allowAdminOrSuperAdmin } = require("../middlewares/auth");
 
@@ -18,6 +19,7 @@ const { auth, allowAdminOrSuperAdmin } = require("../middlewares/auth");
 router.post("/create", auth, createBlog);
 router.get("/allBlogs", auth, allowAdminOrSuperAdmin, getAllBlogs);
 router.get("/approvedBlogs", getApprovedBlogs);
+router.get("/search", searchBlogs); 
 router.get("/slug/:slug", getBlogBySlug)
 
 

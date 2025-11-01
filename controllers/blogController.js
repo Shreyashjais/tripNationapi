@@ -445,3 +445,29 @@ exports.toggleBlogLike = async (req, res) => {
     });
   }
 };
+
+
+
+exports.searchBlogs = async (req, res) => {
+  try {
+    const { query } = req.query; 
+
+    if (!query || query.trim() === "") {
+      return res.status(400).json({ message: "Search query is required" });
+    }
+
+    const blogs = await Blog.find({
+      destination: { $regex: query, $options: "i" },
+      status: "approved",
+    }).select("title"); 
+
+    if (!blogs.length) {
+      return res.status(404).json({ message: "No blogs found" });
+    }
+
+    res.status(200).json(blogs);
+  } catch (error) {
+    console.error("Error searching blogs:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
