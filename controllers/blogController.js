@@ -459,7 +459,7 @@ exports.searchBlogs = async (req, res) => {
     const blogs = await Blog.find({
       destination: { $regex: query, $options: "i" },
       status: "approved",
-    }).select("title"); 
+    }).select("title slug"); 
 
     if (!blogs.length) {
       return res.status(404).json({ message: "No blogs found" });
