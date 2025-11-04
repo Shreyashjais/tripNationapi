@@ -32,10 +32,28 @@ exports.createEnquiry = async (req, res) => {
 
 exports.getAllEnquiries = async (req, res) => {
   try {
-    const enquiries = await Enquiry.find().sort({ createdAt: -1 });
+    const { status, page = 1, limit = 9 } = req.query;
+
+    const query = {};
+   
+    if (status && ["pending", "closed"].includes(status.toLowerCase())) {
+      query.status = status.toLowerCase();
+    }
+
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const [enquiries, total] = await Promise.all([
+      Enquiry.find(query)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(parseInt(limit)),
+      Enquiry.countDocuments(query),
+    ]);
+
     res.status(200).json({
       success: true,
-      count: enquiries.length,
+      count: total,
+      page: parseInt(page),
+      totalPages: Math.ceil(total / limit),
       data: enquiries,
     });
   } catch (error) {
@@ -43,6 +61,7 @@ exports.getAllEnquiries = async (req, res) => {
     res.status(500).json({ success: false, message: "Server error" });
   }
 };
+
 
 
 exports.deleteEnquiry = async (req, res) => {
