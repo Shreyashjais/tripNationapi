@@ -64,6 +64,9 @@ app.use("/enquiry", enquiryRoutes)
 const reviewRoutes = require("./routes/reviewRoutes")
 app.use("/reviews", reviewRoutes)
 
+const mediaRoutes = require("./routes/mediaRoutes");
+app.use("/media", mediaRoutes);
+
 
 
 app.listen(PORT, ()=>{
