@@ -13,7 +13,8 @@ exports.uploadMedia = async (req, res) => {
     }
 
     const file = req.files.file;
-    const folder = req.body.folder || "uploads";
+    const folder = (req.body && req.body.folder) ? req.body.folder : "uploads";
+
     const fileType = file.name.split(".").pop();
 
     let resourceType = "image";
@@ -43,6 +44,7 @@ exports.uploadMedia = async (req, res) => {
     });
   } catch (error) {
     console.error("Upload error:", error);
+    console.log(error, "printing error")
     res.status(500).json({ success: false, message: "Server error during upload" });
   }
 };
